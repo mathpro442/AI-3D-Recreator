@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 3D Recreator</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#080d19;color:#fff}
+main{max-width:1050px;margin:auto;padding:28px}.card{background:#121a2b;border:1px solid #2a3856;border-radius:18px;padding:22px;margin:18px 0}
+h1{font-size:34px;margin:0 0 8px}.muted{color:#aeb9d2}.drop{border:2px dashed #52658e;border-radius:15px;padding:35px;text-align:center;cursor:pointer}
+.drop:hover{border-color:#9ab0ee}.previews{display:flex;flex-wrap:wrap;gap:12px;margin-top:15px}.previews img{width:125px;height:125px;object-fit:cover;border-radius:12px}
+input{width:100%;padding:14px;margin-top:15px;border-radius:10px;border:1px solid #3a4969;background:#0b1220;color:#fff}
+button{padding:14px 20px;border:0;border-radius:11px;font-weight:bold;margin-top:15px;cursor:pointer}.primary{background:#fff;color:#09101d}.primary:disabled{opacity:.45}
+#viewer{width:100%;height:390px;background:radial-gradient(circle,#293a62,#0b1120);border-radius:15px;margin-top:15px}
+a{color:#fff}.download{display:inline-block;margin-top:15px;padding:12px 16px;border-radius:10px;background:#26375d;text-decoration:none}
+</style>
+</head>
+<body><main>
+<h1>🤖 AI 3D Recreator</h1><div class="muted">Photos → vraie génération 3D → textures PBR → GLB</div>
+<div class="card">
+<h2>📸 1. Tes photos</h2>
+<div class="drop" id="drop">Clique ici pour choisir 1 à 4 photos<br><small>JPG, PNG ou JPEG — idéalement sous plusieurs angles</small></div>
+<input id="files" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple hidden>
+<div class="previews" id="previews"></div>
+</div>
+<div class="card">
+<h2>🎨 2. Texture</h2>
+<input id="prompt" placeholder="Ex : texture réaliste, plastique noir, détails métalliques...">
+<button class="primary" id="go" disabled>✨ GÉNÉRER LE VRAI MODÈLE</button>
+<div id="status" class="muted" style="margin-top:12px">Choisis tes photos.</div>
+</div>
+<div class="card"><h2>🧊 3. Résultat</h2>
+<div id="viewer"></div><div id="result"></div></div>
+</main>
+<script>
+const filesEl=document.querySelector("#files"),drop=document.querySelector("#drop"),prev=document.querySelector("#previews"),go=document.querySelector("#go"),status=document.querySelector("#status"),result=document.querySelector("#result");
+let selected=[];
+drop.onclick=()=>filesEl.click();
+filesEl.onchange=()=>{selected=[...filesEl.files].slice(0,4); prev.innerHTML=""; selected.forEach(f=>{let i=document.createElement("img");i.src=URL.createObjectURL(f);prev.appendChild(i)});go.disabled=!selected.length;status.textContent=`${selected.length} photo(s) prête(s).`;};
+
+function dataURI(file){return new Promise((resolve,reject)=>{let r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
+go.onclick=async()=>{
+ try{
+  go.disabled=true; result.innerHTML=""; status.textContent="📤 Envoi des photos à l'IA...";
+  const images=await Promise.all(selected.map(dataURI));
+  const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images,texturePrompt:document.querySelector("#prompt").value})});
+  const d=await r.json(); if(!r.ok) throw new Error(d.error||"Erreur");
+  let id=d.taskId; status.textContent="🤖 Génération IA en cours...";
+  let task;
+  for(;;){
+   await new Promise(x=>setTimeout(x,5000));
+   const rr=await fetch("/api/task/"+encodeURIComponent(id)); task=await rr.json();
+   if(task.status==="SUCCEEDED"||task.status==="FAILED"||task.status==="CANCELED") break;
+   status.textContent=`🤖 Génération IA : ${task.progress||0}%`;
+  }
+  if(task.status!=="SUCCEEDED") throw new Error(task.task_error?.message||"La génération a échoué.");
+  status.textContent="✅ Modèle terminé !";
+  result.innerHTML=`<p>Ton modèle 3D est prêt.</p><a class="download" href="${task.model_urls.glb}" target="_blank" download>⬇️ Télécharger le modèle GLB</a>`;
+ }catch(e){status.textContent="❌ "+e.message}
+ go.disabled=false;
+};
+</script></body></html>

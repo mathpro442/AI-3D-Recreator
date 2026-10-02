@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 3D Recreator — Demo</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#0b1020;color:#fff}
+.wrap{max-width:1050px;margin:auto;padding:28px}.card{background:#151c31;border:1px solid #293452;border-radius:18px;padding:24px;margin-top:18px}
+h1{margin:0 0 8px;font-size:32px}.muted{color:#aeb8d1}
+.drop{border:2px dashed #56678f;border-radius:16px;padding:38px;text-align:center;cursor:pointer;margin-top:20px}
+.drop:hover{border-color:#8ca5e8}.previews{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}.previews img{width:130px;height:130px;object-fit:cover;border-radius:12px;border:1px solid #394765}
+button{border:0;border-radius:12px;padding:14px 20px;font-weight:bold;cursor:pointer;background:#fff;color:#10162a;margin-top:18px}
+button:disabled{opacity:.45;cursor:not-allowed}.status{margin-top:15px;color:#aeb8d1}
+.demo3d{height:310px;display:grid;place-items:center;background:radial-gradient(circle,#27365c,#0e1425);border-radius:16px;margin-top:18px;overflow:hidden}
+.cube{width:130px;height:130px;background:linear-gradient(135deg,#8fb3ff,#435ca4);transform:rotate(30deg) skewY(-8deg);box-shadow:40px 35px 0 #2d3e73,-40px 35px 0 #627cc1;animation:spin 4s linear infinite}
+@keyframes spin{to{transform:rotate(390deg) skewY(-8deg)}}
+a.download{display:inline-block;margin-top:15px;color:#fff;background:#243252;padding:12px 16px;border-radius:10px;text-decoration:none}
+small{color:#8f9ab5}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🤖 AI 3D Recreator</h1>
+<div class="muted">Démo locale — sans Node.js et sans installation.</div>
+
+<div class="card">
+<h2>1. Ajoute tes photos</h2>
+<div class="drop" id="drop">📸 Clique ici pour choisir 1 à 4 images<br><small>JPG, PNG ou WEBP</small></div>
+<input id="files" type="file" accept="image/*" multiple hidden>
+<div class="previews" id="previews"></div>
+</div>
+
+<div class="card">
+<h2>2. Texture / description</h2>
+<input id="prompt" placeholder="Ex : texture rouge métallique, détails réalistes..." style="width:100%;padding:14px;border-radius:10px;border:1px solid #394765;background:#0e1425;color:white">
+<button id="generate" disabled>✨ GÉNÉRER LE MODÈLE (DÉMO)</button>
+<div class="status" id="status">Ajoute au moins une photo.</div>
+</div>
+
+<div class="card">
+<h2>3. Résultat 3D</h2>
+<div class="demo3d"><div class="cube" id="cube"></div></div>
+<div id="result"></div>
+</div>
+</div>
+<script>
+const files=document.getElementById('files'),drop=document.getElementById('drop');
+const previews=document.getElementById('previews'),gen=document.getElementById('generate');
+const status=document.getElementById('status'),result=document.getElementById('result');
+drop.onclick=()=>files.click();
+files.onchange=()=>show(files.files);
+function show(list){
+ previews.innerHTML='';
+ const arr=[...list].slice(0,4);
+ arr.forEach(f=>{const img=document.createElement('img');img.src=URL.createObjectURL(f);previews.appendChild(img)});
+ gen.disabled=arr.length===0;
+ status.textContent=arr.length+' photo(s) sélectionnée(s).';
+}
+gen.onclick=()=>{
+ gen.disabled=true; status.textContent='🤖 L’IA analyse tes photos...';
+ result.innerHTML='';
+ let n=0;
+ const timer=setInterval(()=>{
+   n+=20; status.textContent='🤖 Génération du modèle... '+n+'%';
+   if(n>=100){clearInterval(timer);status.textContent='✅ Démo terminée !';
+   result.innerHTML='<p>Le modèle 3D de démonstration est affiché ci-dessus.</p><a class="download" href="#" onclick="alert(\'Dans cette version sans serveur, le vrai fichier GLB ne peut pas être généré. Pour la vraie IA 3D, il faudra connecter une API.\');return false">⬇️ Télécharger le modèle (démo)</a>';
+   gen.disabled=false;}
+ },500);
+};
+</script>
+</body></html>
